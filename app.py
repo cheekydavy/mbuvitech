@@ -1,16 +1,15 @@
 import os
-import httpx  # Use httpx for async HTTP calls
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
-from openai import DeepAI  # Import the correct DeepAI client
+import openai
 
 # Load environment variables
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Ensure this is set correctly
 
-# Set the API key for DeepAI
+# Set the DeepAI API key
 openai.api_key = OPENAI_API_KEY
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -28,8 +27,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Prepare the request payload for DeepAI API
     try:
-        response = await openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Use your desired model here (e.g., gpt-3.5-turbo or gpt-4)
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # Use the correct model, e.g., gpt-3.5-turbo or gpt-4
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": user_message}
@@ -37,12 +36,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
         # Get the response from the API
-        bot_reply = response.choices[0].message['content']
+        bot_reply = response['choices'][0]['message']['content']
     except Exception as e:
         # Handle any exceptions or errors
         bot_reply = f"Error: {str(e)}"
 
-    # Send response back to user
+    # Send response back to the user
     await update.message.reply_text(bot_reply)
 
 def main() -> None:
