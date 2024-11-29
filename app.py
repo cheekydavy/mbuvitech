@@ -1,5 +1,5 @@
 import os
-import openai
+import requests  # Import requests to make HTTP calls
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")  # Use a new environment variable
 
-# Configure DeepAI
-openai.api_key = OPENAI_API_KEY
+# Google Gemini API configuration
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text('Hello! I am your personal AI assistant. Ask me anything!')
@@ -21,15 +21,39 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Get user message
     user_message = update.message.text
+
+    # Prepare the request payload for Google Gemini
+    request_payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": user_message
+                    }
+                ]
+            }
+        ]
+    }
     
-    # Fetch response from DeepAI
-    response = openai.ChatCompletion.create(
-    model="gpt-3.5",  # Change this to gpt-3.5-turbo
-    messages=[{"role": "user", "content": user_message}]
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    # Send request to Google Gemini API
+    response = requests.post(
+        f"{GEMINI_API_URL}?key={GOOGLE_GEMINI_API_KEY}",
+        headers=headers,
+        json=request_payload
     )
-    
-    bot_reply = response.choices[0].message.content
-    
+
+    if response.status_code == 200:
+        # Successfully got a response from Google Gemini
+        response_data = response.json()
+        bot_reply = response_data.get('contents', [{}])[0].get('parts', [{}])[0].get('text', 'Sorry, I did not understand that.')
+    else:
+        # Handle the error response
+        bot_reply = f"Error: {response.status_code} {response.text}"
+
     # Send response back to user
     await update.message.reply_text(bot_reply)
 
