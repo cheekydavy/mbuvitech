@@ -1,5 +1,5 @@
 import os
-import requests  # Import requests to make HTTP calls
+import httpx  # Use httpx for async HTTP calls
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")  # Use a new environment variable
+GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")  # Ensure this is set correctly
 
 # Google Gemini API configuration
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
@@ -39,12 +39,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "Content-Type": "application/json"
     }
 
-    # Send request to Google Gemini API
-    response = requests.post(
-        f"{GEMINI_API_URL}?key={GOOGLE_GEMINI_API_KEY}",
-        headers=headers,
-        json=request_payload
-    )
+    # Send request to Google Gemini API using httpx
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{GEMINI_API_URL}?key={GOOGLE_GEMINI_API_KEY}",
+            headers=headers,
+            json=request_payload
+        )
 
     if response.status_code == 200:
         # Successfully got a response from Google Gemini
@@ -62,6 +63,34 @@ def main() -> None:
     
     # Set up commands and message handler
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Start the bot
+    app.run_polling()
+
+if __name__ == '__main__':
+    main()import os
+import requests  # Import requests to make HTTP calls
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")  # Use a new environment variable
+
+# Google Gemini API configuration
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('Hello! I am your personal AI assistant. Ask me anything!')
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('You can ask me anything!')
+
+er("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
