@@ -24,8 +24,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Fetch response from DeepAI
     response = openai.ChatCompletion.create(
-        model="gpt-4",  # Choose your DeepAI model here
-        messages=[{"role": "user", "content": user_message}]
+    model="gpt-3.5-turbo",  # Change this to gpt-3.5-turbo
+    messages=[{"role": "user", "content": user_message}]
     )
     
     bot_reply = response.choices[0].message.content
