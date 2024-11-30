@@ -1,3 +1,3 @@
-Flask
-httpx
-python-dotenv
+Flask           # Specify your Flask version
+httpx          # For making HTTP requests
+python-dotenv  # For loading environment variables from .env file
