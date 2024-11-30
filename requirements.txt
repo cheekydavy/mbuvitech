@@ -1,3 +1,5 @@
-Flask           # Specify your Flask version
-httpx          # For making HTTP requests
-python-dotenv  # For loading environment variables from .env file
+# requirements.txt
+
+httpx              # For making HTTP requests
+python-dotenv       # For loading environment variables from .env file
+aiohttp             # For handling HTTP server and requests in an asynchronous way
