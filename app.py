@@ -6,42 +6,81 @@ import openai
 
 # Load environment variables
 load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Ensure this is set correctly
+import os
+import httpx
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
 
-# Set the DeepAI API key
-openai.api_key = OPENAI_API_KEY
+load_dotenv()  # Load environment variables from .env file
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a welcome message when the command /start is issued."""
-    await update.message.reply_text('Hello! I am your personal AI assistant. Ask me anything!')
+app = Flask(__name__)
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send help instructions when the command /help is issued."""
-    await update.message.reply_text('You can ask me anything!')
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.json
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle incoming messages and respond using the DeepAI API."""
-    # Get user message
-    user_message = update.message.text
+    # Extract necessary information from incoming request
+    message = data.get('message')
+    chat_id = message['chat']['id']
+    text = message.get('text') or (message.get('reply_to_message') and message['reply_to_message']['text'])
 
-    # Prepare the request payload for DeepAI API
+    if not text:
+        return jsonify({'error': 'Please provide some text or quote a message to get a response.'})
+
+    # Start the processing and send replies accordingly
+    handle_message(chat_id, text)
+
+    return jsonify({'status': 'ok'})
+
+async def handle_message(chat_id, text):
+    # Responding with a 'composing' status is typically handled by your API
+    send_presence_update(chat_id, 'composing')
+
+    prompt = text  # You can customize the prompt or encode it if needed
+
+    guru1 = os.getenv('CUSTOM_API_1')  # First custom API URL
+    guru2 = os.getenv('CUSTOM_API_2')  # Second custom API URL
+
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Use the correct model, e.g., gpt-3.5-turbo or gpt-4
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": user_message}
-            ]
-        )
+        # First API call
+        async with httpx.AsyncClient() as client:
+            response = await client.get(guru1, params={'prompt': prompt})
+            data = response.json()
+            result = data.get('response', {}).get('response')
 
-        # Get the response from the API
-        bot_reply = response['choices'][0]['message']['content']
+            if not result:
+                raise ValueError('No valid JSON response from the first API')
+
+            await send_message(chat_id, result)
+
     except Exception as e:
-        # Handle any exceptions or errors
-        bot_reply = f"Error: {str(e)}"
+        print('Error from the first API:', e)
 
-    # Send response back to the user
+        # Fallback to the second API call if the first one fails
+        async with httpx.AsyncClient() as client:
+            response = await client.get(guru2, params={'prompt': prompt})
+            data = response.json()
+            result = data.get('completion')
+
+            await send_message(chat_id, result)
+
+def send_presence_update(chat_id, status):
+    # Implementation for sending the presence update
+    # This will depend on the Telegram API library you are using
+    pass
+
+async def send_message(chat_id, text):
+    # Implementation for sending the message back to Telegram
+    # This will depend on the Telegram API library you are using
+    
+    # Replace `YOUR_TELEGRAM_TOKEN` with your actual bot token.
+    url = f"https://api.telegram.org/bot{os.getenv('YOUR_TELEGRAM_TOKEN')}/sendMessage"
+    async with httpx.AsyncClient() as client:
+        await client.post(url, json={'chat_id': chat_id, 'text': text})
+
+if __name__ == '__main__':
+    app.run(port=int(os.getenv("PORT", 5000)))
+ response back to the user
     await update.message.reply_text(bot_reply)
 
 def main() -> None:
