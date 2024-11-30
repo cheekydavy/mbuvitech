@@ -1,12 +1,4 @@
 import os
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from dotenv import load_dotenv
-import openai
-
-# Load environment variables
-load_dotenv()
-import os
 import httpx
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -33,18 +25,19 @@ def webhook():
     return jsonify({'status': 'ok'})
 
 async def handle_message(chat_id, text):
-    # Responding with a 'composing' status is typically handled by your API
+    # Responding with a 'composing' status
     send_presence_update(chat_id, 'composing')
 
     prompt = text  # You can customize the prompt or encode it if needed
 
     guru1 = os.getenv('CUSTOM_API_1')  # First custom API URL
-    guru2 = os.getenv('CUSTOM_API_2')  # Second custom API URL
+    api_key = os.getenv('API_KEY')      # API key
+    guru2 = os.getenv('CUSTOM_API_2')   # Second custom API URL
 
     try:
         # First API call
         async with httpx.AsyncClient() as client:
-            response = await client.get(guru1, params={'prompt': prompt})
+            response = await client.get(guru1, params={'apikey': api_key, 'q': prompt})
             data = response.json()
             result = data.get('response', {}).get('response')
 
@@ -57,43 +50,24 @@ async def handle_message(chat_id, text):
         print('Error from the first API:', e)
 
         # Fallback to the second API call if the first one fails
-        async with httpx.AsyncClient() as client:
-            response = await client.get(guru2, params={'prompt': prompt})
-            data = response.json()
-            result = data.get('completion')
+        if guru2:  # Check if CUSTOM_API_2 is defined
+            async with httpx.AsyncClient() as client:
+                response = await client.get(guru2, params={'prompt': prompt})
+                data = response.json()
+                result = data.get('completion')
 
-            await send_message(chat_id, result)
+                await send_message(chat_id, result)
 
 def send_presence_update(chat_id, status):
-    # Implementation for sending the presence update
+    # Placeholder for sending the presence update
     # This will depend on the Telegram API library you are using
     pass
 
 async def send_message(chat_id, text):
-    # Implementation for sending the message back to Telegram
-    # This will depend on the Telegram API library you are using
-    
-    # Replace `YOUR_TELEGRAM_TOKEN` with your actual bot token.
+    # Send the message back to Telegram
     url = f"https://api.telegram.org/bot{os.getenv('YOUR_TELEGRAM_TOKEN')}/sendMessage"
     async with httpx.AsyncClient() as client:
         await client.post(url, json={'chat_id': chat_id, 'text': text})
 
 if __name__ == '__main__':
     app.run(port=int(os.getenv("PORT", 5000)))
- response back to the user
-    await update.message.reply_text(bot_reply)
-
-def main() -> None:
-    """Start the Telegram bot."""
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    
-    # Set up commands and message handler
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Start the bot
-    app.run_polling()
-
-if __name__ == '__main__':
-    main()
