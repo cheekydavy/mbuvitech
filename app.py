@@ -2,6 +2,7 @@ import os
 import httpx
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -20,7 +21,7 @@ def webhook():
         return jsonify({'error': 'Please provide some text or quote a message to get a response.'})
 
     # Start the processing and send replies accordingly
-    handle_message(chat_id, text)
+    asyncio.run(handle_message(chat_id, text))
 
     return jsonify({'status': 'ok'})
 
@@ -70,44 +71,4 @@ async def send_message(chat_id, text):
         await client.post(url, json={'chat_id': chat_id, 'text': text})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv("PORT", 5000)))import os
-import httpx
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-
-load_dotenv()  # Load environment variables from .env file
-
-app = Flask(__name__)
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    data = request.json
-
-    # Extract necessary information from incoming request
-    message = data.get('message')
-    chat_id = message['chat']['id']
-    text = message.get('text') or (message.get('reply_to_message') and message['reply_to_message']['text'])
-
-    if not text:
-        return jsonify({'error': 'Please provide some text or quote a message to get a response.'})
-
-            async with httpx.AsyncClient() as client:
-                response = await client.get(guru2, params={'prompt': prompt})
-                data = response.json()
-                result = data.get('completion')
-
-                await send_message(chat_id, result)
-
-def send_presence_update(chat_id, status):
-    # Placeholder for sending the presence update
-    # This will depend on the Telegram API library you are using
-    pass
-
-async def send_message(chat_id, text):
-    # Send the message back to Telegram
-    url = f"https://api.telegram.org/bot{os.getenv('YOUR_TELEGRAM_TOKEN')}/sendMessage"
-    async with httpx.AsyncClient() as client:
-        await client.post(url, json={'chat_id': chat_id, 'text': text})
-
-if __name__ == '__main__':
-    app.run(port=int(os.getenv("PORT", 5000)))
+    app.run(host='0.0.0.0', port=int(os.getenv("PORT", 5000)))
